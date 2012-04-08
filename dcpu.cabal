@@ -1,0 +1,10 @@
+Version:                0.1
+name:                   dcpu
+Description:            Toolchain for working with Notch's DCPU-16 architecture
+License:                BSD3
+Author:                 Aaron Brenzel
+Build-Type:             Simple
+Cabal-Version:          >= 1.2
+
+library
+    Build-Depends:      stm,parsec,base,containers,bytestring
