@@ -70,7 +70,7 @@ assembleFromFile path = do
         otherwise -> return (map assemble instructions)
 
 writeInstruction instr = do
-    return $ putWord16be instr
+    return $ putWord16host instr
 
 serializeInstructions instrs = do
     return $ map runPut instrs

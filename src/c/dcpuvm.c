@@ -1,8 +1,21 @@
+/* DCPU-16 VM Implementation */
+
+/* DCPU-16 Spec is Copyright 2012 Mojang */
+/* http://0x10c.com/doc/dcpu-16.txt */
+
+/* Some of this code has been adapted and/or copied from Brian Swetland in 
+ * accordance with the BSD license.  
+ * 
+ * His code can be found here: 
+ *      https://github.com/swetland/dcpu16/blob/master/emulator.c*/
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+
+extern uint16_t *disassemble(uint16_t *pc, char *out);
 
 static uint16_t literals[0x20] = {
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
@@ -249,21 +262,46 @@ void execute_instruction(machine *m, uint16_t op) {
     
 };
 
+uint16_t execute(machine *m) {
+    uint16_t next_instruction = m->RAM[m->PC];
+    execute_instruction(m, next_instruction);
+    m->PC++;
+    return m->RAM[m->PC];
+}
+
+void dumpheader(void) {
+    fprintf(stdout,
+    "PC   SP   OV   A    B    C    X    Y    Z    I    J    Instruction\n"
+    "---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- -----------\n");
+}
+
+void dumpstate(machine *m) {
+    char out[128];
+    disassemble(m->RAM + m->PC, out);
+    fprintf(stderr,
+        "%04x %04x %04x %04x %04x %04x %04x %04x %04x %04x %04x %s\n",
+        m->PC, m->SP, m->O,
+        m->registers[0], m->registers[1], m->registers[2], m->registers[3],
+        m->registers[4], m->registers[5], m->registers[6], m->registers[7],
+        out);
+}
+
 void load_into_memory(machine* m, const char* path) {
     FILE *fh;
-    char buffer[16];
+    uint16_t *instruction = malloc(sizeof(uint16_t));
     uint16_t counter = 0;
     
-    if (!(fh = fopen(path, "r"))) {
+    if (!(fh = fopen(path, "rb"))) {
         fprintf(stderr, "Unable to open file: %s\n", path);
         exit(1);
     }
     
-    while (!feof(fh) && fgets(buffer, 16, fh)) {
-        m->RAM[counter] = strtoul(buffer, 0, 16);
+    while (!feof(fh)) {
+        fread(instruction, 2, 1, fh);
+        m->RAM[counter] = *instruction;
         counter++;
     }
-    
+    free(instruction);
     fclose(fh);
 }
 
@@ -275,19 +313,13 @@ int main(int argc, char** argv) {
     machine m;
     init_machine(&m);
     
-    uint16_t *reg_a = get_dcpu_value(&m, 0x00);
-    uint16_t *reg_b = get_dcpu_value(&m, 0x01);
-    
-    execute_instruction(&m, 0x9401);
-    execute_instruction(&m, 0xFC02);
-    execute_instruction(&m, 0x8C11);
-    execute_instruction(&m, 0xB014);
-    execute_instruction(&m, 0x0403);
-    fprintf(stdout, "REGISTER A: %d\n", *reg_a);
-    fprintf(stdout, "REGISTER B: %d\n", *reg_b);
-    /*execute_instruction(&m, 0x8463);
-    fprintf(stdout, "REGISTER I: %d\n", *reg);
-    fprintf(stdout, "OVERFLOW: %d\n", *overflow);*/
-    
+    load_into_memory(&m, argc > 1 ? argv[1] : "out.hex");
+
+    dumpheader();
+    uint16_t result = 1;
+    while (result != 0) {
+        dumpstate(&m);
+        result = execute(&m);
+    }
     return 0;
 };
