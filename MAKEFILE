@@ -1,2 +1,7 @@
 all:
-	gcc src/c/dcpuvm.c -o dcpu.exe
+	gcc src/c/dcpuvm.c -o dcpu-vm.exe
+	cabal install --bindir=.
+
+clean:
+	rm dcpu-asm.exe
+	rm dcpu-vm.exe

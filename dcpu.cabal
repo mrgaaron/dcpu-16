@@ -6,5 +6,9 @@ Author:                 Aaron Brenzel
 Build-Type:             Simple
 Cabal-Version:          >= 1.2
 
-library
-    Build-Depends:      stm,parsec,base,containers,bytestring
+Executable dcpu-asm
+    Hs-Source-Dirs:     src/haskell
+    Other-modules:      Parser, Assembler
+    Main-is:            Main.hs
+    Build-Depends:      stm,parsec,base,containers,bytestring,haskell98,binary,
+                        ghc,regex-compat

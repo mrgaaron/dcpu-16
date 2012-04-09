@@ -271,19 +271,23 @@ void init_machine(machine *m) {
     memset(&m, 0, sizeof(m));
 }
 
-
 int main(int argc, char** argv) {
     machine m;
     init_machine(&m);
     
-    uint16_t *reg = get_dcpu_value(&m, 0x06);
-    uint16_t *overflow = get_dcpu_value(&m, 0x1d);
+    uint16_t *reg_a = get_dcpu_value(&m, 0x00);
+    uint16_t *reg_b = get_dcpu_value(&m, 0x01);
     
-    execute_instruction(&m, 0xa861);
+    execute_instruction(&m, 0x9401);
+    execute_instruction(&m, 0xFC02);
+    execute_instruction(&m, 0x8C11);
+    execute_instruction(&m, 0xB014);
+    execute_instruction(&m, 0x0403);
+    fprintf(stdout, "REGISTER A: %d\n", *reg_a);
+    fprintf(stdout, "REGISTER B: %d\n", *reg_b);
+    /*execute_instruction(&m, 0x8463);
     fprintf(stdout, "REGISTER I: %d\n", *reg);
-    execute_instruction(&m, 0x8463);
-    fprintf(stdout, "REGISTER I: %d\n", *reg);
-    fprintf(stdout, "OVERFLOW: %d\n", *overflow);
+    fprintf(stdout, "OVERFLOW: %d\n", *overflow);*/
     
     return 0;
 };
