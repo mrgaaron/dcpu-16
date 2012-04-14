@@ -78,14 +78,14 @@ uint16_t *get_dcpu_value(machine *m, uint16_t opcode) {
     };
 };
 
-inline void do_set_op(machine *m, uint16_t a, uint16_t b) {
+void do_set_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *mem_loc = get_dcpu_value(m, a);
     uint16_t *b_val = get_dcpu_value(m, b);
     
     *mem_loc = *b_val;
 };
 
-inline void do_add_op(machine *m, uint16_t a, uint16_t b) {
+void do_add_op(machine *m, uint16_t a, uint16_t b) {
     uint32_t res;
     uint16_t *a_val = get_dcpu_value(m, a);
     uint16_t *b_val = get_dcpu_value(m, b);
@@ -95,7 +95,7 @@ inline void do_add_op(machine *m, uint16_t a, uint16_t b) {
     m->O = res >> 16;
 }
 
-inline void do_sub_op(machine *m, uint16_t a, uint16_t b) {
+void do_sub_op(machine *m, uint16_t a, uint16_t b) {
     uint32_t res;
     uint16_t *a_val = get_dcpu_value(m, a);
     uint16_t *b_val = get_dcpu_value(m, b);
@@ -105,7 +105,7 @@ inline void do_sub_op(machine *m, uint16_t a, uint16_t b) {
     m->O = res >> 16;
 }
 
-inline void do_mul_op(machine *m, uint16_t a, uint16_t b) {
+void do_mul_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *a_val = get_dcpu_value(m, a);
     uint16_t *b_val = get_dcpu_value(m, b);
     
@@ -113,7 +113,7 @@ inline void do_mul_op(machine *m, uint16_t a, uint16_t b) {
     m->O = (*a_val >> 16) & 0xFFFF;
 }
 
-inline void do_div_op(machine *m, uint16_t a, uint16_t b) {
+void do_div_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *a_val = get_dcpu_value(m, a);
     uint16_t *b_val = get_dcpu_value(m, b);
     uint16_t res;
@@ -123,7 +123,7 @@ inline void do_div_op(machine *m, uint16_t a, uint16_t b) {
     *a_val = res;
 }
 
-inline void do_mod_op(machine *m, uint16_t a, uint16_t b) {
+void do_mod_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *a_val = get_dcpu_value(m, a);
     uint16_t *b_val = get_dcpu_value(m, b);
     
@@ -134,7 +134,7 @@ inline void do_mod_op(machine *m, uint16_t a, uint16_t b) {
     }
 }
 
-inline void do_shiftl_op(machine *m, uint16_t a, uint16_t b) {
+void do_shiftl_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *a_val = get_dcpu_value(m, a);
     uint16_t *b_val = get_dcpu_value(m, b);
     uint16_t res;
@@ -144,7 +144,7 @@ inline void do_shiftl_op(machine *m, uint16_t a, uint16_t b) {
     *a_val = res;
 }
 
-inline void do_shiftr_op(machine *m, uint16_t a, uint16_t b) {
+void do_shiftr_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *a_val = get_dcpu_value(m, a);
     uint16_t *b_val = get_dcpu_value(m, b);
     uint16_t res;
@@ -154,60 +154,60 @@ inline void do_shiftr_op(machine *m, uint16_t a, uint16_t b) {
     *a_val = res;
 }
 
-inline void do_bitand_op(machine *m, uint16_t a, uint16_t b) {
+void do_bitand_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *a_val = get_dcpu_value(m, a);
     uint16_t *b_val = get_dcpu_value(m, b);
     
     *a_val = (*a_val) & (*b_val);
 }
 
-inline void do_bitor_op(machine *m, uint16_t a, uint16_t b) {
+void do_bitor_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *a_val = get_dcpu_value(m, a);
     uint16_t *b_val = get_dcpu_value(m, b);
     
     *a_val = (*a_val) | (*b_val);
 }
 
-inline void do_bitxor_op(machine *m, uint16_t a, uint16_t b) {
+void do_bitxor_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *a_val = get_dcpu_value(m, a);
     uint16_t *b_val = get_dcpu_value(m, b);
     
     *a_val = (*a_val) ^ (*b_val);
 }
 
-inline void do_ife_op(machine *m, uint16_t a, uint16_t b) {
+void do_ife_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *a_val = get_dcpu_value(m, a);
     uint16_t *b_val = get_dcpu_value(m, b);
     
     if ((*a_val) != (*b_val)) {
-        m->PC += 1;
+        m->PC++;
     }
 }
 
-inline void do_ifn_op(machine *m, uint16_t a, uint16_t b) {
+void do_ifn_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *a_val = get_dcpu_value(m, a);
     uint16_t *b_val = get_dcpu_value(m, b);
     
     if ((*a_val) == (*b_val)) {
-        m->PC += 1;
+        m->PC++;
     }
 }
 
-inline void do_ifg_op(machine *m, uint16_t a, uint16_t b) {
+void do_ifg_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *a_val = get_dcpu_value(m, a);
     uint16_t *b_val = get_dcpu_value(m, b);
     
     if ((*a_val) > (*b_val)) {
-        m->PC += 1;
+        m->PC++;
     }
 }
 
-inline void do_ifb_op(machine *m, uint16_t a, uint16_t b) {
+void do_ifb_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *a_val = get_dcpu_value(m, a);
     uint16_t *b_val = get_dcpu_value(m, b);
     
     if (((*a_val) & (*b_val)) != 0) {
-        m->PC += 1;
+        m->PC++;
     }
 }
 
@@ -218,11 +218,11 @@ op_func dispatch_table[15] = {
     &do_ifn_op, &do_ifg_op, &do_ifb_op
 };
 
-inline void dummy(machine *m, uint16_t a) {
+void dummy(machine *m, uint16_t a) {
     return;
 }
 
-inline void do_jsr_op(machine *m, uint16_t a) {
+void do_jsr_op(machine *m, uint16_t a) {
     //this function performs the push
     uint16_t *stack_loc = get_dcpu_value(m, 0x1A);
     *stack_loc = m->PC;
@@ -294,6 +294,8 @@ void load_into_memory(machine* m, const char* path) {
     FILE *fh;
     uint16_t *instruction = malloc(sizeof(uint16_t));
     uint16_t counter = 0;
+    int file_loc = 0;
+    int fread_stat = 0;
     
     if (!(fh = fopen(path, "rb"))) {
         fprintf(stderr, "Unable to open file: %s\n", path);
@@ -301,7 +303,13 @@ void load_into_memory(machine* m, const char* path) {
     }
     
     while (!feof(fh)) {
-        fread(instruction, 2, 1, fh);
+        file_loc = ftell(fh);
+        fread_stat = fread(instruction, 2, 1, fh);
+        //fread might blow up before we technically reach the end of the file
+        //due to newlines
+        if (fread_stat != 1) {
+            break;
+        }
         m->RAM[counter] = *instruction;
         counter++;
     }
@@ -317,15 +325,7 @@ int main(int argc, char** argv) {
     machine m;
     init_machine(&m);
     
-    //load_into_memory(&m, argc > 1 ? argv[1] : "out.hex");
-    m.RAM[0] = 0x7c01;
-    m.RAM[1] = 0x0030;
-    m.RAM[2] = 0x7de1;
-    m.RAM[3] = 0x1000;
-    m.RAM[4] = 0x0020;
-    m.RAM[5] = 0x7803;
-    m.RAM[6] = 0x1000;
-    m.RAM[7] = 0xa861;
+    load_into_memory(&m, argc > 1 ? argv[1] : "out.hex");
     
     dumpheader();
     uint16_t result = 1;
@@ -333,5 +333,7 @@ int main(int argc, char** argv) {
         dumpstate(&m);
         result = execute(&m);
     }
+    //show the final state
+    dumpstate(&m);
     return 0;
 };
