@@ -41,8 +41,6 @@ genIdentHex ident = case ident of
                         Literal _     -> genLiteralHex ident
                         Address _     -> genAddressHex ident
 
-genRawHex (Literal i) = read i :: Word16
-
 genCmdHex :: Binop -> Word16
 genCmdHex SET = 0x1 :: Word16
 genCmdHex ADD = 0x2 :: Word16
@@ -61,9 +59,17 @@ genCmdHex IFG = 0xe :: Word16
 genCmdHex IFB = 0xf :: Word16
 
 assemble :: Expr -> [Word16]
-assemble (Bin cmd (BinArg a (Literal b))) =
+assemble (Bin cmd (BinArg (MemLocation a) (Address b))) =
+    [(genCmdHex cmd) .|. (0x1E `shiftL` 4) .|. 
+        (0x1F `shiftL` 10), 
+        genMemLocHex (MemLocation a), genAddressHex (Address b)]
+assemble (Bin cmd (BinArg a (MemLocation b))) =
     [(genCmdHex cmd) .|. ((genIdentHex a) `shiftL` 4) .|. 
-        (0x1F `shiftL` 10), genIdentHex (Literal b)]
+        (0x1E `shiftL` 10), genMemLocHex (MemLocation b)]
+assemble (Bin cmd (BinArg a (Address b))) 
+         | (read b :: Word16) > 31 =
+    [(genCmdHex cmd) .|. ((genIdentHex a) `shiftL` 4) .|. 
+        (0x1F `shiftL` 10), genIdentHex (Address b)]
 assemble (Bin cmd (BinArg a b)) = 
     [(genCmdHex cmd) .|. ((genIdentHex a) `shiftL` 4) .|. 
         ((genIdentHex b) `shiftL` 10)]
