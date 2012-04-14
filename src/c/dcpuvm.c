@@ -51,10 +51,12 @@ uint16_t *get_dcpu_value(machine *m, uint16_t opcode) {
         case 0x10: case 0x11: case 0x12: case 0x13:
         case 0x14: case 0x15: case 0x16: case 0x17:
             //the mask at the end ensures the returned address is 16-bit
+            m->PC++;
             return m->RAM + 
-                    ((m->RAM[m->PC++] + m->registers[opcode & 7]) & 0xffff);
+                    ((m->RAM[m->PC] + m->registers[opcode & 7]) & 0xffff);
         case 0x18:
-            return m->RAM + m->SP++;
+            m->SP++;
+            return m->RAM + m->SP;
         case 0x19:
             return m->RAM + m->SP;
         case 0x1a:
@@ -66,9 +68,11 @@ uint16_t *get_dcpu_value(machine *m, uint16_t opcode) {
         case 0x1d:
             return &m->O;
         case 0x1e:
-            return m->RAM + m->RAM[m->PC++];
+            m->PC++;
+            return m->RAM + m->RAM[m->PC];
         case 0x1f:
-            return m->RAM + m->PC++;
+            m->PC++;
+            return m->RAM + m->PC;
         default:
             return literals + (opcode & 0x1F);
     };
@@ -76,7 +80,7 @@ uint16_t *get_dcpu_value(machine *m, uint16_t opcode) {
 
 inline void do_set_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *mem_loc = get_dcpu_value(m, a);
-    uint16_t *b_val = get_dcpu_value(m, b);  
+    uint16_t *b_val = get_dcpu_value(m, b);
     
     *mem_loc = *b_val;
 };
@@ -271,8 +275,8 @@ uint16_t execute(machine *m) {
 
 void dumpheader(void) {
     fprintf(stdout,
-    "PC   SP   OV   A    B    C    X    Y    Z    I    J    Instruction\n"
-    "---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- -----------\n");
+    "PC   SP   OV   A    B    C    X    Y    Z    I    J    Next Instruction\n"
+    "---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----------------\n");
 }
 
 void dumpstate(machine *m) {
@@ -313,8 +317,16 @@ int main(int argc, char** argv) {
     machine m;
     init_machine(&m);
     
-    load_into_memory(&m, argc > 1 ? argv[1] : "out.hex");
-
+    //load_into_memory(&m, argc > 1 ? argv[1] : "out.hex");
+    m.RAM[0] = 0x7c01;
+    m.RAM[1] = 0x0030;
+    m.RAM[2] = 0x7de1;
+    m.RAM[3] = 0x1000;
+    m.RAM[4] = 0x0020;
+    m.RAM[5] = 0x7803;
+    m.RAM[6] = 0x1000;
+    m.RAM[7] = 0xa861;
+    
     dumpheader();
     uint16_t result = 1;
     while (result != 0) {

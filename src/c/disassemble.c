@@ -39,7 +39,7 @@
 typedef uint16_t u16;
 
 static const char *opcode[] = {
-    "XXX", "MOV", "ADD", "SUB", "MUL", "DIV", "MOD", "SHL",
+    "XXX", "SET", "ADD", "SUB", "MUL", "DIV", "MOD", "SHL",
     "SHR", "AND", "BOR", "XOR", "IFE", "IFN", "IFG", "IFB",
 };
 

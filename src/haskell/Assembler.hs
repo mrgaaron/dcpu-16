@@ -41,6 +41,8 @@ genIdentHex ident = case ident of
                         Literal _     -> genLiteralHex ident
                         Address _     -> genAddressHex ident
 
+genRawHex (Literal i) = read i :: Word16
+
 genCmdHex :: Binop -> Word16
 genCmdHex SET = 0x1 :: Word16
 genCmdHex ADD = 0x2 :: Word16
@@ -58,16 +60,19 @@ genCmdHex IFN = 0xd :: Word16
 genCmdHex IFG = 0xe :: Word16
 genCmdHex IFB = 0xf :: Word16
 
-assemble :: Expr -> Word16
+assemble :: Expr -> [Word16]
+assemble (Bin cmd (BinArg a (Literal b))) =
+    [(genCmdHex cmd) .|. ((genIdentHex a) `shiftL` 4) .|. 
+        (0x1F `shiftL` 10), genIdentHex (Literal b)]
 assemble (Bin cmd (BinArg a b)) = 
-    (genCmdHex cmd) .|. ((genIdentHex a) `shiftL` 4) .|. 
-        ((genIdentHex b) `shiftL` 10)
-
+    [(genCmdHex cmd) .|. ((genIdentHex a) `shiftL` 4) .|. 
+        ((genIdentHex b) `shiftL` 10)]
+   
 assembleFromFile path = do
     instructions <- parseAssemblerFile path
     case (head instructions) of
         Error err -> return []
-        otherwise -> return (map assemble instructions)
+        otherwise -> return (concat $ map assemble instructions)
 
 writeInstruction instr = do
     return $ putWord16host instr
