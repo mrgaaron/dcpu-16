@@ -17,6 +17,9 @@
 
 extern uint16_t *disassemble(uint16_t *pc, char *out);
 
+//count the cycles taken for simulation purposes
+static int cycles = 0;
+
 static uint16_t literals[0x20] = {
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
     0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
@@ -51,6 +54,7 @@ uint16_t *get_dcpu_value(machine *m, uint16_t opcode) {
         case 0x10: case 0x11: case 0x12: case 0x13:
         case 0x14: case 0x15: case 0x16: case 0x17:
             //the mask at the end ensures the returned address is 16-bit
+            cycles += 1;
             m->PC++;
             return m->RAM + 
                     ((m->RAM[m->PC] + m->registers[opcode & 7]) & 0xffff);
@@ -68,9 +72,11 @@ uint16_t *get_dcpu_value(machine *m, uint16_t opcode) {
         case 0x1d:
             return &m->O;
         case 0x1e:
+            cycles += 1;
             m->PC++;
             return m->RAM + m->RAM[m->PC];
         case 0x1f:
+            cycles +=1 ;
             m->PC++;
             return m->RAM + m->PC;
         default:
@@ -83,6 +89,7 @@ void do_set_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *b_val = get_dcpu_value(m, b);
     
     *mem_loc = *b_val;
+    cycles += 1;
 };
 
 void do_add_op(machine *m, uint16_t a, uint16_t b) {
@@ -93,6 +100,7 @@ void do_add_op(machine *m, uint16_t a, uint16_t b) {
     res = *a_val + *b_val;
     *a_val = res & 0xFF;
     m->O = res >> 16;
+    cycles += 2;
 }
 
 void do_sub_op(machine *m, uint16_t a, uint16_t b) {
@@ -103,6 +111,7 @@ void do_sub_op(machine *m, uint16_t a, uint16_t b) {
     res = *a_val - *b_val;
     *a_val = res & 0xFF;
     m->O = res >> 16;
+    cycles += 2;
 }
 
 void do_mul_op(machine *m, uint16_t a, uint16_t b) {
@@ -111,6 +120,7 @@ void do_mul_op(machine *m, uint16_t a, uint16_t b) {
     
     *a_val = (*a_val) * (*b_val);
     m->O = (*a_val >> 16) & 0xFFFF;
+    cycles += 2;
 }
 
 void do_div_op(machine *m, uint16_t a, uint16_t b) {
@@ -121,6 +131,7 @@ void do_div_op(machine *m, uint16_t a, uint16_t b) {
     res = (*a_val) / (*b_val);
     m->O = ((*a_val >> 16) / (*b_val)) & 0xFFFF;
     *a_val = res;
+    cycles += 3;
 }
 
 void do_mod_op(machine *m, uint16_t a, uint16_t b) {
@@ -132,6 +143,7 @@ void do_mod_op(machine *m, uint16_t a, uint16_t b) {
     } else {
         *a_val = (*a_val) % (*b_val);
     }
+    cycles += 3;
 }
 
 void do_shiftl_op(machine *m, uint16_t a, uint16_t b) {
@@ -142,6 +154,7 @@ void do_shiftl_op(machine *m, uint16_t a, uint16_t b) {
     res = (*a_val) << (*b_val);
     m->O = (((*a_val) << (*b_val)) >> 16) & 0xFFFF;
     *a_val = res;
+    cycles += 2;
 }
 
 void do_shiftr_op(machine *m, uint16_t a, uint16_t b) {
@@ -152,6 +165,7 @@ void do_shiftr_op(machine *m, uint16_t a, uint16_t b) {
     res = (*a_val) >> (*b_val);
     m->O = (((*a_val) << (*b_val)) >> 16) & 0xFFFF;
     *a_val = res;
+    cycles += 2;
 }
 
 void do_bitand_op(machine *m, uint16_t a, uint16_t b) {
@@ -159,6 +173,7 @@ void do_bitand_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *b_val = get_dcpu_value(m, b);
     
     *a_val = (*a_val) & (*b_val);
+    cycles += 1;
 }
 
 void do_bitor_op(machine *m, uint16_t a, uint16_t b) {
@@ -166,6 +181,7 @@ void do_bitor_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *b_val = get_dcpu_value(m, b);
     
     *a_val = (*a_val) | (*b_val);
+    cycles += 1;
 }
 
 void do_bitxor_op(machine *m, uint16_t a, uint16_t b) {
@@ -173,42 +189,55 @@ void do_bitxor_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *b_val = get_dcpu_value(m, b);
     
     *a_val = (*a_val) ^ (*b_val);
+    cycles += 1;
 }
 
 void do_ife_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *a_val = get_dcpu_value(m, a);
     uint16_t *b_val = get_dcpu_value(m, b);
     
+    cycles += 2;
     if ((*a_val) != (*b_val)) {
         m->PC++;
+        return;
     }
+    cycles += 1;
 }
 
 void do_ifn_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *a_val = get_dcpu_value(m, a);
     uint16_t *b_val = get_dcpu_value(m, b);
     
+    cycles += 2;
     if ((*a_val) == (*b_val)) {
         m->PC++;
+        return;
     }
+    cycles += 1;
 }
 
 void do_ifg_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *a_val = get_dcpu_value(m, a);
     uint16_t *b_val = get_dcpu_value(m, b);
     
+    cycles += 2;
     if ((*a_val) > (*b_val)) {
         m->PC++;
+        return;
     }
+    cycles += 1;
 }
 
 void do_ifb_op(machine *m, uint16_t a, uint16_t b) {
     uint16_t *a_val = get_dcpu_value(m, a);
     uint16_t *b_val = get_dcpu_value(m, b);
     
+    cycles += 2;
     if (((*a_val) & (*b_val)) != 0) {
         m->PC++;
+        return;
     }
+    cycles += 1;
 }
 
 op_func dispatch_table[15] = {
@@ -282,12 +311,18 @@ void dumpheader(void) {
 void dumpstate(machine *m) {
     char out[128];
     disassemble(m->RAM + m->PC, out);
-    fprintf(stderr,
+    fprintf(stdout,
         "%04x %04x %04x %04x %04x %04x %04x %04x %04x %04x %04x %s\n",
         m->PC, m->SP, m->O,
         m->registers[0], m->registers[1], m->registers[2], m->registers[3],
         m->registers[4], m->registers[5], m->registers[6], m->registers[7],
         out);
+}
+
+void dump_cycles() {
+    fprintf(stdout, 
+    "                                                       TOTAL CYCLES: %d\n",
+            cycles);
 }
 
 void load_into_memory(machine* m, const char* path) {
@@ -335,5 +370,7 @@ int main(int argc, char** argv) {
     }
     //show the final state
     dumpstate(&m);
+    fprintf(stdout, "\n");
+    dump_cycles();
     return 0;
 };

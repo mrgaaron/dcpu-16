@@ -116,7 +116,7 @@ writeAssembledFile inPath = do
     outh <- openBinaryFile (genPath inPath) WriteMode
     forM serialized (B.hPut outh)
     hClose outh
-        where genPath inp = concat $ (takeWhile notPeriod inp) : [".hex"]
+        where genPath inp = concat $ (takeWhile notPeriod inp) : [".bin"]
               notPeriod c = 
                     if c /= '.' then True else False
     
