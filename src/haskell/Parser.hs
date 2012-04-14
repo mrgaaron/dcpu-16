@@ -8,7 +8,7 @@ module Parser
     ) where
 
 import Data.List (intercalate)
-import Control.Monad (liftM2)
+import Control.Monad (liftM)
 import System.IO
 import Text.ParserCombinators.Parsec
 import Text.Parsec.String
@@ -41,11 +41,14 @@ data ArgList =   BinArg Expr Expr
 
 data Expr =   Register String
             | MemLocation String
+            | MemOffset String String
             | Address String
             | Literal String
             | Error String         --used internally by assembler
             | Bin Binop ArgList
             | Un Unop ArgList
+            | Label String [Expr]
+            | LabelRef String
             | Comment String
                     deriving Show
 
@@ -63,21 +66,37 @@ decLiteral = do
         return (Literal c1)
         else return (Address c1)
 
+regList = [string "A", string "B", string "C", string "X", string "Y",
+           string "Z", string "I", string "J", string "PC", string "SP",
+           string "O"]
+
+memOffset = do
+    char '['
+    c1 <- char '0'
+    c2 <- char 'x'
+    c3 <- manyTill hexDigit (char '+')
+    reg <- choice regList 
+    char ']'
+    oneOf ", " <|> lookAhead newline
+    return (MemOffset (c1:c2:c3) reg)
+
 memLoc = do
     char '['
     loc <- manyTill anyChar (char ']') 
     oneOf ", " <|> lookAhead newline
     return (MemLocation loc)
 
-regList = [string "A", string "B", string "C", string "X", string "Y",
-           string "Z", string "I", string "J", string "PC", string "SP",
-           string "O"]
 reg = do
     r <- choice regList
     oneOf ", " <|> lookAhead newline
     return (Register r)
 
-ident = memLoc <|> hexLiteral <|> decLiteral <|> reg
+labelRef = do
+    lbl <- manyTill letter (oneOf ", " <|> lookAhead newline)
+    return (LabelRef lbl)
+
+ident = (try memOffset) <|> memLoc <|> (try decLiteral) 
+            <|> hexLiteral  <|> reg <|> labelRef
 
 arglist = do
     id1 <- ident
@@ -98,6 +117,7 @@ cmdList = [try (string "IFE "), try (string "ADD "), try (string "MOD "),
 cmd = do
     c <- choice cmdList
     args <- arglist
+    newline
     case c of
         "IFE " -> return (Bin IFE args)
         "IFN " -> return (Bin IFN args)
@@ -116,7 +136,13 @@ cmd = do
         "BOR " -> return (Bin BOR args)
         "JSR " -> return (Un JSR args)
 
-assemblerFile = endBy (spaces >> cmd) newline
+asmLabel = do
+    starter <- char ':'
+    name <- manyTill letter space
+    cmds <- manyTill (spaces >> cmd) newline
+    return (Label name cmds)
+
+assemblerFile = manyTill (spaces >> (cmd <|> asmLabel)) eof
 
 commentRegex = R.mkRegexWithOpts "[ ]*;.*" True False 
 removeComments line = R.subRegex commentRegex line ""

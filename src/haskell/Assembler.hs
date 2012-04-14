@@ -31,6 +31,16 @@ genMemLocHex (MemLocation "I") = 0x0e :: Word16
 genMemLocHex (MemLocation "J") = 0x0f :: Word16
 genMemLocHex (MemLocation i) = read i :: Word16
 
+genMemOffsetHex :: Expr -> Word16
+genMemOffsetHex (MemOffset i "A") = 0x10 :: Word16
+genMemOffsetHex (MemOffset i "B") = 0x11 :: Word16
+genMemOffsetHex (MemOffset i "C") = 0x12 :: Word16
+genMemOffsetHex (MemOffset i "X") = 0x13 :: Word16
+genMemOffsetHex (MemOffset i "Y") = 0x14 :: Word16
+genMemOffsetHex (MemOffset i "Z") = 0x15 :: Word16
+genMemOffsetHex (MemOffset i "I") = 0x16 :: Word16
+genMemOffsetHex (MemOffset i "J") = 0x17 :: Word16
+
 genLiteralHex (Literal i) = (read i :: Word16) + 32
 
 genAddressHex (Address i) = read i :: Word16
@@ -58,21 +68,34 @@ genCmdHex IFN = 0xd :: Word16
 genCmdHex IFG = 0xe :: Word16
 genCmdHex IFB = 0xf :: Word16
 
+assembleOpcode a = [genCmdHex a]
+
+assembleOperand :: Int -> Expr -> [Word16] -> [Word16]
+assembleOperand shft a (op:rest) = 
+    case a of 
+        MemLocation a -> 
+            case isAlpha $ head a of
+                False  ->
+                        (op .|. (0x1E `shiftL` shft)) : rest ++ 
+                            [(genMemLocHex (MemLocation a))]
+                True ->
+                        (op .|. (genMemLocHex (MemLocation a)) `shiftL` shft) 
+                                  : rest
+        Address a     ->
+            (op .|. (0x1F `shiftL` shft)) : rest ++ 
+                        [genAddressHex (Address a)]
+        MemOffset a b ->
+            (op .|. ((genMemOffsetHex (MemOffset a b)) `shiftL` shft)) : rest ++ 
+                    [genAddressHex (Address a)]
+        otherwise     ->
+            [op .|. ((genIdentHex a) `shiftL` shft)]
+
+assembleFst = assembleOperand 4
+assembleSnd = assembleOperand 10
+
 assemble :: Expr -> [Word16]
-assemble (Bin cmd (BinArg (MemLocation a) (Address b))) =
-    [(genCmdHex cmd) .|. (0x1E `shiftL` 4) .|. 
-        (0x1F `shiftL` 10), 
-        genMemLocHex (MemLocation a), genAddressHex (Address b)]
-assemble (Bin cmd (BinArg a (MemLocation b))) =
-    [(genCmdHex cmd) .|. ((genIdentHex a) `shiftL` 4) .|. 
-        (0x1E `shiftL` 10), genMemLocHex (MemLocation b)]
-assemble (Bin cmd (BinArg a (Address b))) 
-         | (read b :: Word16) > 31 =
-    [(genCmdHex cmd) .|. ((genIdentHex a) `shiftL` 4) .|. 
-        (0x1F `shiftL` 10), genIdentHex (Address b)]
-assemble (Bin cmd (BinArg a b)) = 
-    [(genCmdHex cmd) .|. ((genIdentHex a) `shiftL` 4) .|. 
-        ((genIdentHex b) `shiftL` 10)]
+assemble (Bin cmd (BinArg a b)) =
+    assembleSnd b $ assembleFst a $ assembleOpcode cmd
    
 assembleFromFile path = do
     instructions <- parseAssemblerFile path
