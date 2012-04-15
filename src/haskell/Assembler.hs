@@ -6,9 +6,11 @@ import Data.Binary.Put
 import Data.Bits
 import Data.Word
 import Data.Char as C
-import Numeric
+import qualified Data.Map as Map
 import Control.Monad (forM)
 import System.IO (openBinaryFile, IOMode(..), hClose)
+
+type LabelMap = Map.Map String Int
 
 genRegisterHex :: Expr -> Word16
 genRegisterHex (Register "A") = 0x00 :: Word16
@@ -68,7 +70,11 @@ genCmdHex IFN = 0xd :: Word16
 genCmdHex IFG = 0xe :: Word16
 genCmdHex IFB = 0xf :: Word16
 
+genUnCmdHex :: Unop -> Word16
+genUnCmdHex JSR = (0x01 :: Word16) `shiftL` 4
+
 assembleOpcode a = [genCmdHex a]
+assembleUnOpcode a = [genUnCmdHex a]
 
 assembleOperand :: Int -> Expr -> [Word16] -> [Word16]
 assembleOperand shft a (op:rest) = 
@@ -96,9 +102,22 @@ assembleSnd = assembleOperand 10
 assemble :: Expr -> [Word16]
 assemble (Bin cmd (BinArg a b)) =
     assembleSnd b $ assembleFst a $ assembleOpcode cmd
-   
+assemble (Un cmd (OneArg a)) =
+    assembleSnd a $ assembleUnOpcode cmd
+assemble (Label name exprs) = concat $ map assemble exprs
+
+calculateLabelLocs labels = 
+    foldl calcLabel [] labels
+    where calcLabel lst (Label name exprs) = 
+            (name, (length $ assemble (Label name exprs)) 
+                + (snd $ head lst)) : lst
+  
+isLabel (Label _ _) = True
+isLabel _           = False
+
 assembleFromFile path = do
     instructions <- parseAssemblerFile path
+    
     case (head instructions) of
         Error err -> return []
         otherwise -> return (concat $ map assemble instructions)
