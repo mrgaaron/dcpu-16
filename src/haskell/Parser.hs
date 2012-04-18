@@ -7,6 +7,7 @@ module Parser
         parseAssemblerFile
     ) where
 
+import Data.Word
 import Data.List (intercalate)
 import Control.Monad (liftM)
 import System.IO
@@ -44,12 +45,13 @@ data Expr =   Register String
             | MemOffset String String
             | Address String
             | Literal String
-            | Error String         --used internally by assembler
             | Bin Binop ArgList
             | Un Unop ArgList
             | Label String [Expr]
             | LabelRef String
             | Comment String
+            | Error String              --used internally by assembler
+            | Code Word16               --used internally by assembler
                     deriving Show
 
 hexLiteral = do

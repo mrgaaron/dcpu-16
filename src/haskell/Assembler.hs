@@ -6,11 +6,18 @@ import Data.Binary.Put
 import Data.Bits
 import Data.Word
 import Data.Char as C
-import qualified Data.Map as Map
 import Control.Monad (forM)
+import Control.Monad.State
+import qualified Data.Map as Map
 import System.IO (openBinaryFile, IOMode(..), hClose)
 
-type LabelMap = Map.Map String Int
+type LabelMap       = Map.Map String Int
+
+data AssemblerState = AssemblerState {
+    code        :: [Expr],
+    curPos      :: Int,
+    symbolTable :: LabelMap
+} deriving (Show)
 
 genRegisterHex :: Expr -> Word16
 genRegisterHex (Register "A") = 0x00 :: Word16
@@ -99,21 +106,39 @@ assembleOperand shft a (op:rest) =
 assembleFst = assembleOperand 4
 assembleSnd = assembleOperand 10
 
-assemble :: Expr -> [Word16]
+assemble :: Expr -> [Expr]
 assemble (Bin cmd (BinArg a b)) =
-    assembleSnd b $ assembleFst a $ assembleOpcode cmd
+    map Code (assembleSnd b $ assembleFst a $ assembleOpcode cmd)
 assemble (Un cmd (OneArg a)) =
-    assembleSnd a $ assembleUnOpcode cmd
+    map Code (assembleSnd a $ assembleUnOpcode cmd)
 assemble (Label name exprs) = concat $ map assemble exprs
 
-calculateLabelLocs labels = 
-    foldl calcLabel [] labels
-    where calcLabel lst (Label name exprs) = 
-            (name, (length $ assemble (Label name exprs)) 
-                + (snd $ head lst)) : lst
-  
-isLabel (Label _ _) = True
-isLabel _           = False
+assemble' :: Expr -> State AssemblerState ()
+assemble' (Label name exprs) = do
+    aState <- get
+    let symbols  = symbolTable aState
+    let pos      = curPos aState
+    let codes    = code aState
+    let newCodes = concat (map assemble exprs)
+    put $ aState { code        = codes ++ newCodes,
+                   curPos      = pos + (length newCodes),
+                   symbolTable = Map.insert name pos symbols}
+    return ()
+
+assemble' expr = do
+    aState <- get
+    let symbols  = symbolTable aState
+    let pos      = curPos aState
+    let codes    = code aState
+    let newCodes = assemble expr
+    put $ aState { code        = codes ++ newCodes,
+                   curPos      = pos + (length newCodes) }
+    return ()
+
+initAssemblerState :: State AssemblerState ()
+initAssemblerState = do
+    put $ AssemblerState { code = [], curPos = 0, symbolTable = Map.empty }
+    return ()
 
 assembleFromFile path = do
     instructions <- parseAssemblerFile path
@@ -122,20 +147,20 @@ assembleFromFile path = do
         Error err -> return []
         otherwise -> return (concat $ map assemble instructions)
 
-writeInstruction instr = do
-    return $ putWord16host instr
+--writeInstruction instr = do
+--    return $ putWord16host instr
 
-serializeInstructions instrs = do
-    return $ map runPut instrs
+--serializeInstructions instrs = do
+--    return $ map runPut instrs
 
-writeAssembledFile inPath = do
-    instrs <- assembleFromFile inPath
-    written <- forM instrs writeInstruction
-    serialized <- serializeInstructions written
-    outh <- openBinaryFile (genPath inPath) WriteMode
-    forM serialized (B.hPut outh)
-    hClose outh
-        where genPath inp = concat $ (takeWhile notPeriod inp) : [".bin"]
-              notPeriod c = 
-                    if c /= '.' then True else False
-    
+--writeAssembledFile inPath = do
+--    instrs <- assembleFromFile inPath
+--    written <- forM instrs writeInstruction
+--    serialized <- serializeInstructions written
+--    outh <- openBinaryFile (genPath inPath) WriteMode
+--    forM serialized (B.hPut outh)
+--    hClose outh
+--        where genPath inp = concat $ (takeWhile notPeriod inp) : [".bin"]
+--              notPeriod c = 
+--                    if c /= '.' then True else False
+--    
